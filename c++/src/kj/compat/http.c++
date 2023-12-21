@@ -3797,6 +3797,13 @@ public:
     return transferredBytes;
   }
 
+  kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+    KJ_IF_SOME(ws, state) {
+      return ws.getPreferredExtensions(ctx);
+    }
+    return kj::none;
+  };
+
 private:
   kj::Maybe<WebSocket&> state;
   // Object-oriented state! If any method call is blocked waiting on activity from the other end,
@@ -3915,6 +3922,10 @@ private:
     KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
    }
 
+  kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+    KJ_FAIL_ASSERT("BlockedSend WebSocket has no websocket to get a compression preference from.");
+  };
+
   private:
     kj::PromiseFulfiller<void>& fulfiller;
     WebSocketPipeImpl& pipe;
@@ -4000,6 +4011,10 @@ private:
       KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
     }
 
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      return input.getPreferredExtensions(ctx);
+    };
+
   private:
     kj::PromiseFulfiller<void>& fulfiller;
     WebSocketPipeImpl& pipe;
@@ -4083,6 +4098,11 @@ private:
     uint64_t receivedByteCount() override {
       KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
     }
+
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      KJ_FAIL_ASSERT(
+          "BlockedReceive WebSocket has no websocket to get a compression preference from.");
+    };
 
   private:
     kj::PromiseFulfiller<Message>& fulfiller;
@@ -4180,6 +4200,10 @@ private:
       KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
     }
 
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      return output.getPreferredExtensions(ctx);
+    };
+
   private:
     kj::PromiseFulfiller<void>& fulfiller;
     WebSocketPipeImpl& pipe;
@@ -4226,6 +4250,9 @@ private:
       KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
     }
 
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      KJ_FAIL_ASSERT("Disconnected WebSocket has no websocket to get a compression preference from.");
+    };
   };
 
   class Aborted final: public WebSocket {
@@ -4267,6 +4294,9 @@ private:
     uint64_t receivedByteCount() override {
       KJ_FAIL_ASSERT("Bytes are not counted for the individual states of WebSocketPipeImpl.");
     }
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      KJ_FAIL_ASSERT("Aborted WebSocket has no websocket to get a compression preference from.");
+    };
   };
 };
 
@@ -4311,6 +4341,12 @@ public:
 
   uint64_t sentByteCount() override { return out->sentByteCount(); }
   uint64_t receivedByteCount() override { return in->sentByteCount(); }
+
+  kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+    // TODO(now): Do we want in or out?
+    // return in->getPreferredExtensions(ctx);
+    return out->getPreferredExtensions(ctx);
+  };
 
 private:
   kj::Own<WebSocketPipeImpl> in;
@@ -6826,6 +6862,10 @@ private:
     uint64_t sentByteCount() override { return inner->sentByteCount(); }
     uint64_t receivedByteCount() override { return inner->receivedByteCount(); }
 
+    kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+      return inner->getPreferredExtensions(ctx);
+    };
+
   private:
     kj::Own<kj::WebSocket> inner;
     kj::Maybe<kj::Promise<void>> completionTask;
@@ -7913,6 +7953,10 @@ private:
 
       uint64_t sentByteCount() override { KJ_FAIL_ASSERT("received bad WebSocket handshake"); }
       uint64_t receivedByteCount() override { KJ_FAIL_ASSERT("received bad WebSocket handshake"); }
+
+      kj::Maybe<kj::String> getPreferredExtensions(ExtensionsContext ctx) override {
+        KJ_FAIL_ASSERT(kj::cp(exception));
+      };
 
     private:
       kj::Exception exception;
